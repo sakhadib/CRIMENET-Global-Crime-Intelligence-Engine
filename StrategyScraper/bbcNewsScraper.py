@@ -50,21 +50,38 @@ class BBCNewsScraper(NewsScraper):
         else:
             return f"Error: Unable to fetch the home page. Status code {response.status_code}"
     
-    def ScrapeFullText(self) -> str:
+    def ScrapeFullText(self, url: str) -> str:
         """
-        Scrapes a full article's text. For this dummy example, we'll scrape a fixed URL.
+        Scrapes a full article's text from the given URL.
+        Looks for div elements with data-component="text-block" and extracts all p tags within them.
         """
-        url = "https://www.bbc.com/news/world-61806334"  # Example article
         response = requests.get(url)
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
-            article = soup.find('div', class_='story-body__inner')
-            if article and isinstance(article, Tag):
-                paragraphs = article.find_all('p')
-                full_text = "\n".join([para.get_text() for para in paragraphs])
-                return full_text
+            
+            # Find all div elements with data-component="text-block"
+            text_blocks = soup.find_all('div', attrs={'data-component': 'text-block'})
+            
+            if text_blocks:
+                full_text_parts = []
+                
+                for block in text_blocks:
+                    if isinstance(block, Tag):
+                        # Find all p tags within this text block
+                        paragraphs = block.find_all('p')
+                        
+                        for para in paragraphs:
+                            if isinstance(para, Tag):
+                                text = para.get_text(strip=True)
+                                if text:  # Only add non-empty paragraphs
+                                    full_text_parts.append(text)
+                
+                if full_text_parts:
+                    return "\n\n".join(full_text_parts)
+                else:
+                    return "Error: No text content found in the article"
             else:
-                return "Error: Article content not found"
+                return "Error: No text blocks found in the article"
         else:
             return f"Error: Unable to fetch the article. Status code {response.status_code}"
     
