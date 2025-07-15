@@ -83,10 +83,6 @@ J4 --> K1[Feed into GPT / Claude / Gemini]
 K1 --> K2[Evaluate Temporal Reasoning]
 K2 --> K3[Compare & Document LLM Accuracy]
 
-%% 📄 Research Paper Phase
-K3 --> L1[Draft Results & Visuals]
-L1 --> L2[Submit to arXiv / EMNLP / ACL]
-
 ```
 
 ## Research Directions
