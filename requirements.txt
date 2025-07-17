@@ -1,2 +1,6 @@
 requests
 bs4
+joblib
+pandas
+scikit-learn
+sklearn.feature_extraction.text

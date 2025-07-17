@@ -12,9 +12,11 @@ class NewsScraper(ABC):
         pass
     
     @abstractmethod
-    def ScrapeFullText(self) -> str:
+    def ScrapeFullText(self, url: str) -> str:
         """
         Scrape and return the full text of a specific news article.
+        
+        :param url: The URL of the article to scrape.
         """
         pass
     
