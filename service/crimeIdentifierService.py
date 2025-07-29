@@ -26,34 +26,53 @@ class CrimeIdentifierService:
         """
         return text  # Assuming you don't have any further preprocessing for simplicity.
 
-    def classify(self, title: str):
+    def classify_with_confidence(self, title: str, confidence_threshold: float = 0.75):
         """
-        Classify a headline using the trained model.
+        Classify a headline using the trained model with confidence threshold.
         
         :param title: The headline to classify.
-        :return: 1 if crime-related, 0 otherwise.
+        :param confidence_threshold: Minimum confidence score required for crime classification.
+        :return: tuple (is_crime: bool, confidence_score: float)
         """
         # Preprocess the title
         processed_title = self.preprocess(title)
         
         # Since the model is a pipeline that includes the vectorizer,
         # we pass the raw text directly to the model
-        prediction = self.model.predict([processed_title])
+        prediction_proba = self.model.predict_proba([processed_title])
         
-        result = prediction[0]
-        classification = "crime-related" if result == 1 else "non-crime"
-        self.logger.log(f"Classified headline as {classification}: '{title[:50]}{'...' if len(title) > 50 else ''}'")
+        # Get the probability for crime class (class 1)
+        crime_probability = prediction_proba[0][1] if len(prediction_proba[0]) > 1 else 0.0
         
-        return result  # Return 0 or 1
+        # Only classify as crime if confidence is above threshold
+        is_crime = crime_probability > confidence_threshold
+        
+        classification = "crime-related" if is_crime else "non-crime"
+        confidence_str = f"(confidence: {crime_probability:.3f})"
+        self.logger.log(f"Classified headline as {classification} {confidence_str}: '{title}'")
+        
+        return is_crime, crime_probability
 
-    def filter_crime_headlines(self, headlines_dict: list):
+    def classify(self, title: str, confidence_threshold: float = 0.75):
         """
-        Filters the headlines to return only crime-related news.
+        Classify a headline using the trained model with confidence threshold.
         
-        :param headlines_dict: List of dictionaries with {'title': <headline>, 'link': <URL>}
-        :return: List of dictionaries with only crime-related headlines and their links.
+        :param title: The headline to classify.
+        :param confidence_threshold: Minimum confidence score required for crime classification.
+        :return: 1 if crime-related with high confidence, 0 otherwise.
         """
-        self.logger.log(f"Starting crime headline filtering process for {len(headlines_dict)} headlines")
+        is_crime, _ = self.classify_with_confidence(title, confidence_threshold)
+        return 1 if is_crime else 0
+
+    def filter_crime_headlines(self, headlines_dict: list, confidence_threshold: float = 0.75):
+        """
+        Filters the headlines to return only crime-related news with high confidence.
+        
+        :param headlines_dict: List of dictionaries with {'title': <headline>, 'link': <URL>, 'source': <source>}
+        :param confidence_threshold: Minimum confidence score required for crime classification.
+        :return: List of dictionaries with only high-confidence crime-related headlines including confidence scores.
+        """
+        self.logger.log(f"Starting crime headline filtering process for {len(headlines_dict)} headlines with confidence threshold {confidence_threshold}")
         
         crime_news = []
         skipped_count = 0
@@ -62,17 +81,25 @@ class CrimeIdentifierService:
         for data in headlines_dict:
             title = data.get('title')
             link = data.get('link')
+            source = data.get('source', 'Unknown')
             
             # Skip if title or link is missing
             if not title or not link:
                 skipped_count += 1
                 continue
             
-            # Classify the headline
-            if self.classify(title) == 1:  # 1 is crime-related
-                crime_news.append(data)
+            # Classify the headline with confidence threshold
+            is_crime, confidence_score = self.classify_with_confidence(title, confidence_threshold)
+            
+            if is_crime:  # Only include high-confidence crime headlines
+                crime_news.append({
+                    'source': source,
+                    'title': title,
+                    'url': link,
+                    'confidence_score': round(confidence_score, 3)
+                })
         
-        self.logger.log(f"Crime filtering completed: {len(crime_news)} crime headlines found, {skipped_count} headlines skipped due to missing data")
+        self.logger.log(f"Crime filtering completed: {len(crime_news)} high-confidence crime headlines found, {skipped_count} headlines skipped due to missing data")
         
         return crime_news
 

@@ -21,6 +21,11 @@ class ScrapingService:
                     
                     # Handle both success (list) and error (string) cases
                     if isinstance(data, list):
+                        # Add source information to each headline
+                        for item in data:
+                            if isinstance(item, dict):
+                                item['source'] = website_name
+                        
                         self.data.extend(data)
                         self.log_service.log(f"Successfully scraped {len(data)} headlines from {website_name}")
                     elif isinstance(data, str):
