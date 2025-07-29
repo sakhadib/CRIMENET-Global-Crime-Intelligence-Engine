@@ -1,0 +1,159 @@
+name: CRIMENET Daily Crime Data Scraper
+
+on:
+  # Schedule to run daily at 11 PM GMT
+  schedule:
+    - cron: '0 23 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+    inputs:
+      log_level:
+        description: 'Log level'
+        required: false
+        default: 'info'
+        type: choice
+        options:
+        - info
+        - debug
+
+jobs:
+  scrape-crime-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.13'
+    
+    - name: Create virtual environment
+      run: |
+        python -m venv .venv
+        source .venv/bin/activate
+        echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+        echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+    
+    - name: Install dependencies
+      run: |
+        source .venv/bin/activate
+        pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create data directory
+      run: |
+        mkdir -p data
+    
+    - name: Run CRIMENET scraper
+      run: |
+        source .venv/bin/activate
+        python main.py
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+    
+    - name: Check generated files
+      run: |
+        echo "=== Generated Files ==="
+        ls -la data/
+        echo ""
+        echo "=== Crime News CSV Preview ==="
+        if [ -f "data/crime_news.csv" ]; then
+          head -10 data/crime_news.csv
+        else
+          echo "crime_news.csv not found"
+        fi
+        echo ""
+        echo "=== Log File Preview ==="
+        if [ -f "log" ]; then
+          tail -20 log
+        else
+          echo "log file not found"
+        fi
+    
+    - name: Get current timestamp
+      id: timestamp
+      run: echo "timestamp=$(date +'%Y-%m-%d_%H-%M-%S')" >> $GITHUB_OUTPUT
+    
+    - name: Archive results
+      run: |
+        mkdir -p archives
+        if [ -f "data/crime_news.csv" ]; then
+          cp data/crime_news.csv "archives/crime_news_${{ steps.timestamp.outputs.timestamp }}.csv"
+        fi
+        if [ -f "log" ]; then
+          cp log "archives/log_${{ steps.timestamp.outputs.timestamp }}.txt"
+        fi
+    
+    - name: Commit and push results
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/ archives/ log
+        git diff --staged --quiet || git commit -m "Daily crime data update - ${{ steps.timestamp.outputs.timestamp }}"
+        git push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: crimenet-results-${{ steps.timestamp.outputs.timestamp }}
+        path: |
+          data/crime_news.csv
+          log
+          archives/
+        retention-days: 30
+    
+    - name: Create summary
+      run: |
+        echo "## CRIMENET Daily Scraper Results 📊" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Execution Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ -f "data/crime_news.csv" ]; then
+          HEADLINE_COUNT=$(tail -n +2 data/crime_news.csv | wc -l)
+          echo "**Crime Headlines Found:** $HEADLINE_COUNT" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Latest Crime Headlines:" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Source | Title | Confidence |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|------------|" >> $GITHUB_STEP_SUMMARY
+          
+          # Show top 5 headlines
+          tail -n +2 data/crime_news.csv | head -5 | while IFS=',' read -r source title url confidence; do
+            # Remove quotes from title if present
+            title=$(echo "$title" | sed 's/^"//;s/"$//')
+            # Truncate title if too long
+            if [ ${#title} -gt 60 ]; then
+              title="${title:0:60}..."
+            fi
+            echo "| $source | $title | $confidence |" >> $GITHUB_STEP_SUMMARY
+          done
+        else
+          echo "**Crime Headlines Found:** 0" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ No crime headlines were generated. Check the logs for issues." >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📁 **Artifacts:** Results have been archived and are available for download." >> $GITHUB_STEP_SUMMARY
+
+  notify-on-failure:
+    runs-on: ubuntu-latest
+    needs: scrape-crime-data
+    if: failure()
+    
+    steps:
+    - name: Create failure notification
+      run: |
+        echo "## ❌ CRIMENET Scraper Failed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "The daily crime data scraping job failed. Please check the logs." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Time:** $(date)" >> $GITHUB_STEP_SUMMARY
