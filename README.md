@@ -39,49 +39,65 @@ CRIMENET is an advanced analytical platform designed for global crime intelligen
 ```mermaid
 graph TD
 
-%% ⏱ GitHub Actions Automation
-A[Start: GitHub Action Trigger / Daily Schedule] --> B1[Load Source Configs 200+ sites]
+%% Color Legend
+%% Automation: Light Blue
+%% Scraping/Data Collection: Orange
+%% Crime Processing: Red
+%% Storage: Purple
+%% AI Processing: Teal
+%% API/Interface: Green
+%% Analytics: Gold
 
-%% 🧱 Strategy-based Scraping
-B1 --> B2[Run Strategy Scrapers] --> B3[Extract Headlines]
+%% ⏱ GitHub Actions Automation - Light Blue
+A[Start: GitHub Action Trigger / Daily Schedule]:::automation --> B1[Load Source Configs 200+ sites]:::automation
 
-%% 🧠 Title Classification
-B3 --> C1[Run Title Classifier Small NLP Model]
-C1 -->|If Crime| D1[Scrape Full Article Content]
+%% 🧱 Strategy-based Scraping - Orange
+B1:::automation --> B2[Run Strategy Scrapers]:::scraping
+B2:::scraping --> B3[Get HomePage News URLs]:::scraping
 
-%% 🔁 Deduplication
-D1 --> E1[Preprocess + Normalize Text]
-E1 --> E2[SHA-256 + MD5 Fingerprinting]
-E2 --> E3[Check Hashes & Similarity Score]
-E3 -->|Unique| F1[Send to Information Extractor]
-E3 -->|Duplicate| X1[Skip & Log Duplicate]
+%% Pull News - Orange
+B3:::scraping --> C1[Pull full text along with category if found]:::scraping
+C1:::scraping -->|If Crime| D1[Label as crime and store]:::crime
+C1:::scraping -->|Not Crime| Z1[Store to Database]:::storage
 
-%% 🧠 Information Extraction
-F1 --> F2[Run NLP/LLM Extractor]
-F2 --> F3[Extract: who, what, where, when, why, how]
-F3 --> F4[Add Confidence Score + JSON Schema]
+%% 🔁 Deduplication - Yellow
+D1:::crime --> E3[Deduplication and Cross Referencing]:::processing
+E3:::processing -->|Unique| F1[Send to Information Extractor]:::ai
+E3:::processing -->|Exact Duplicate| X1[Skip & Log Duplicate]:::processing
 
-%% 💾 Storage Layer
-F4 --> G1[Insert into SQL DB]
-F4 --> G2[Generate SBERT Vectors]
-G2 --> G3[Insert into Vector DB]
+%% 🧠 Information Extraction - Teal
+F1:::ai --> F2[Run Extractor]:::ai
+F2:::ai --> F3[Extract: who, what, where, when, why, how, etc.]:::ai
+F3:::ai --> F4[Create structured schema]:::ai
 
-%% 🔍 API and UI Interface
-G1 --> H1[REST/GraphQL API for Filtered Search]
-G3 --> H2[Semantic Search Interface]
-H1 --> I1[Crime Dashboard UI]
-H2 --> I1
+%% 💾 Storage Layer - Purple
+F4:::ai --> G1[Insert into SQL DB]:::storage
+F4:::ai --> G2[Generate SBERT Vectors]:::storage
+G2:::storage --> G3[Insert into Vector DB]:::storage
 
-%% 📊 Analytics Engine
-G1 --> J1[Trend Analysis Engine]
-J1 --> J2[Crime Frequency/Location Map]
-J1 --> J3[Repeat Offender Tracker]
-J1 --> J4[Temporal Story Chain Finder]
+%% 🔍 API and UI Interface - Green
+G1:::storage --> H1[REST/GraphQL API for Filtered Search]:::api
+G3:::storage --> H2[Semantic Search Interface]:::api
 
-%% 🧪 LLM Benchmarking
-J4 --> K1[Feed into GPT / Claude / Gemini]
-K1 --> K2[Evaluate Temporal Reasoning]
-K2 --> K3[Compare & Document LLM Accuracy]
+%% 📊 Analytics Engine - Gold
+G1:::storage --> J1[Trend Analysis Engine]:::analytics
+J1:::analytics --> J2[Crime Frequency/Location Map]:::analytics
+J1:::analytics --> J4[Temporal Story Chain Finder using LLMs]:::analytics
+
+%% Style Definitions
+classDef automation fill:#D6EAF8,stroke:#3498DB,stroke-width:2px;
+classDef scraping fill:#FDEBD0,stroke:#E67E22,stroke-width:2px;
+classDef crime fill:#FADBD8,stroke:#E74C3C,stroke-width:2px;
+classDef processing fill:#FCF3CF,stroke:#F1C40F,stroke-width:2px;
+classDef ai fill:#D1F2EB,stroke:#1ABC9C,stroke-width:2px;
+classDef storage fill:#EBDEF0,stroke:#9B59B6,stroke-width:2px;
+classDef api fill:#D5F5E3,stroke:#2ECC71,stroke-width:2px;
+classDef analytics fill:#FEF9E7,stroke:#F39C12,stroke-width:2px;
+
+%% Add these two lines for black text:
+%% linkStyle default stroke:transparent
+classDef allNodes color:black
+class A,B1,B2,B3,C1,D1,Z1,E3,F1,X1,F2,F3,F4,G1,G2,G3,H1,H2,J1,J2,J4 allNodes
 
 ```
 
