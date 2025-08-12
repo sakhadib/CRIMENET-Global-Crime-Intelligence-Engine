@@ -3,5 +3,7 @@
 
 from .scraper import NewsScraper
 from .bbcNewsScraper import BBCNewsScraper
+from .euroNewsScraper import EuroNewsScraper
+from .APNewsScraper import APNewsScraper
 
-__all__ = ['NewsScraper', 'BBCNewsScraper']
+__all__ = ['NewsScraper', 'BBCNewsScraper', 'EuroNewsScraper', 'APNewsScraper']
