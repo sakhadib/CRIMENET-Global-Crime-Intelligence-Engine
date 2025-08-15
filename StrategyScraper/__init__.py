@@ -6,5 +6,9 @@ from .bbcNewsScraper import BBCNewsScraper
 from .yahooNewsScraper import YahooNewsScraper
 from .googleNewsScraper import GoogleNewsScraper
 from .newYorkTimesScraper import NewYorkTimesScraper
-
-__all__ = ['NewsScraper', 'BBCNewsScraper', 'YahooNewsScraper', 'GoogleNewsScraper', 'NewYorkTimesScraper']
+from .euroNewsScraper import EuroNewsScraper
+from .APNewsScraper import APNewsScraper
+from .VOAScraper import VOAScraper
+from .DWScraper import DWScraper
+    
+__all__ = ['NewsScraper', 'BBCNewsScraper', 'YahooNewsScraper', 'GoogleNewsScraper', 'NewYorkTimesScraper', 'EuroNewsScraper', 'APNewsScraper', 'VOAScraper']
