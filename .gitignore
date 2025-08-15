@@ -150,3 +150,6 @@ Desktop.ini
 
 # Test output
 test-output/
+
+# Log files
+log/
